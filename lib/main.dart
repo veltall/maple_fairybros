@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:date_time_picker/date_time_picker.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -11,105 +14,234 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Day counting Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.amber,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+// 1. Extend [ConsumerStatefulWidget]
+class MyHomePage extends ConsumerStatefulWidget {
+  const MyHomePage({Key? key}) : super(key: key);
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+// 2. Extend [ConsumerState]
+class _MyHomePageState extends ConsumerState<MyHomePage> {
+  @override
+  void initState() {
+    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
+    // 3. use ref.watch() to get the value of the provider
+    final dateRange = ref.watch(dateRangeProvider.notifier);
+    final weekdays = dateRange.countDays();
+    final weekends = dateRange.countWeekends();
+    final userInput = ref.watch(userInputProvider);
+    final userInputVal = int.tryParse(userInput) ?? 0;
+    final max = weekdays + weekends - userInputVal;
+    final _controller = TextEditingController();
     return Scaffold(
       appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: const Text("Fairy Bros' Golden Giveaway"),
       ),
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-          ],
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500),
+          margin: const EdgeInsets.only(top: 16),
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  width: 250,
+                  height: 120,
+                  // color: Colors.blue,
+                  child: Column(
+                    children: [
+                      DateTimePicker(
+                        dateHintText: 'Start: 2022 / 02 / 09',
+                        // dateLabelText: 'Start',
+                        icon: Icon(
+                          Icons.event,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                        dateMask: 'yyyy / MM / dd',
+                        type: DateTimePickerType.date,
+                        firstDate: DateTime(2022, 1, 1),
+                        lastDate: DateTime(2022, 7, 1),
+                        onChanged: (selectedDate) {
+                          ref
+                              .read(beginDateProvider.notifier)
+                              .updateDate(selectedDate);
+                        },
+                      ),
+                      DateTimePicker(
+                        icon: Icon(
+                          Icons.event,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                        firstDate: DateTime(2022, 1, 1),
+                        lastDate: DateTime(2022, 7, 1),
+                        dateHintText: 'End: 2022 / 06 / 14',
+                        // dateLabelText: 'End',
+                        onChanged: (selectedDate) {
+                          ref
+                              .read(endDateProvider.notifier)
+                              .updateDate(selectedDate);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(
+                height: 20,
+              ),
+              if (weekdays > 0)
+                Card(
+                  child: Container(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ListTile(
+                      title: Text(
+                        'Total stamps: ${weekdays + weekends}',
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(
+                            height: 8,
+                          ),
+                          Text(
+                              'There are $weekdays days between selected dates.'),
+                          Text(
+                              'There are $weekends weekends between selected dates.'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              const SizedBox(
+                height: 30,
+              ),
+              const Divider(),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SizedBox(
+                  width: 250,
+                  child: TextFormField(
+                    controller: _controller,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: <TextInputFormatter>[
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                    ],
+                    decoration: InputDecoration(
+                      labelText: "Missed days",
+                      icon: Icon(
+                        Icons.numbers,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                    onFieldSubmitted: (text) {
+                      ref.read(userInputProvider.state).update((state) => text);
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(
+                height: 20,
+              ),
+              Card(
+                child: Container(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ListTile(
+                    title: Text('Maximum achievable: $max'),
+                    subtitle: Text('Total missed days: $userInput'),
+                    trailing: (max >= 144)
+                        ? const Icon(
+                            Icons.check,
+                            color: Colors.green,
+                          )
+                        : const Icon(
+                            Icons.cancel,
+                            color: Colors.red,
+                          ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
+  }
+}
+
+final userInputProvider = StateProvider<String>((ref) {
+  return '0';
+});
+
+final beginDateProvider = StateNotifierProvider<FairyDate, DateTime>((ref) {
+  return FairyDate(2022, 2, 9);
+});
+final endDateProvider = StateNotifierProvider<FairyDate, DateTime>((ref) {
+  return FairyDate(2022, 6, 14);
+});
+
+final dateRangeProvider =
+    StateNotifierProvider<FairyDateRange, DateTimeRange>((ref) {
+  final begin = ref.watch(beginDateProvider);
+  final end = ref.watch(endDateProvider);
+  return FairyDateRange(begin, end);
+});
+
+class FairyDateRange extends StateNotifier<DateTimeRange> {
+  FairyDateRange(DateTime begin, DateTime end)
+      : super(DateTimeRange(start: begin, end: end)) {
+    state = super.state;
+  }
+
+  int countDays() {
+    return state.duration.inDays;
+  }
+
+  int countWeekends() {
+    int nbDays = state.duration.inDays;
+    if (nbDays == 0) return 0;
+    List<int> days = List.generate(nbDays, (index) {
+      int weekDay =
+          DateTime(state.start.year, state.start.month, state.start.day + index)
+              .weekday;
+      if (weekDay == DateTime.saturday || weekDay == DateTime.sunday) {
+        return 1;
+      }
+      return 0;
+    });
+    return days.reduce((a, b) => a + b);
+  }
+}
+
+class FairyDate extends StateNotifier<DateTime> {
+  FairyDate([int year = 2022, int month = 2, int day = 9])
+      : super(DateTime(year, month, day)) {
+    state = DateTime(year, month, day);
+  }
+  void updateDate(String dateString) {
+    state = DateTime.parse(dateString);
+  }
+
+  void clearDate() {
+    state = DateTime.now();
   }
 }
